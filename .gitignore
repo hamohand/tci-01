@@ -33,6 +33,7 @@ node_modules/
 # ========================
 *.env
 .env
+/sql
 
 ### IntelliJ IDEA ###
 .idea/
