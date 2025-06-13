@@ -1,0 +1,62 @@
+services:
+  db:
+    image: 'postgres:16'
+    container_name: db-tci-container
+    environment:
+      - 'POSTGRES_DB=tci_bd'
+      - 'POSTGRES_PASSWORD=030809'
+      - 'POSTGRES_USER=med'
+
+    ports:
+      - '5432:5432'
+    volumes:
+      - tci-data:/var/lib/postgresql/data
+      - ./src/main/resources/sql:/docker-entrypoint-initdb.d
+    # Effacer les volumes et recréer de nouvelles données (relir le dossier 'sql' :
+    # docker compose down
+    # docker compose down --volumes --remove-orphans  # supprime le volume
+    # docker compose up --build # si première fois
+    # docker compose up -d # sinon
+    healthcheck:
+      test: ["CMD", "pg_isready" , "-h" , "db", "-U", "med"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tci-network
+
+  app:
+    build: .
+    container_name: app-tci-container
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - '8080:8080'
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/tci_bd?charset=UTF8
+      - SPRING_DATASOURCE_USERNAME=med
+      - SPRING_DATASOURCE_PASSWORD=030809
+    networks:
+      - tci-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend-tci-container
+    ports:
+      - '4200:80'
+    depends_on:
+      - app
+    networks:
+      - tci-network
+
+volumes:
+  tci-data:
+
+networks:
+  tci-network:
+    driver: bridge
+
+
